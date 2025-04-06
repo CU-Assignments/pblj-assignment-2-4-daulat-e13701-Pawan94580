@@ -1,0 +1,208 @@
+public class Student { 
+    private int id; 
+    private String fullName; 
+    private String dept; 
+    private int score; 
+    public Student(int id, String fullName, String dept, int score) { 
+        this.id = id; 
+        this.fullName = fullName; 
+        this.dept = dept; 
+        this.score = score; 
+    } 
+    // Getters and Setters 
+    public int getId() { return id; } 
+    public void setId(int id) { this.id = id; }
+    public String getFullName() { return fullName; } 
+    public void setFullName(String fullName) { this.fullName = fullName; } 
+    public String getDept() { return dept; } 
+    public void setDept(String dept) { this.dept = dept; } 
+    public int getScore() { return score; } 
+    public void setScore(int score) { this.score = score; } 
+    @Override 
+    public String toString() { 
+        return "Student ID: " + id + ", Name: " + fullName + ", Department: " + dept + ", Score: " + score; 
+    } 
+} 
+import java.util.List; 
+import java.util.Scanner; 
+public class StudentView { 
+    private final StudentController studentController = new StudentController(); 
+    private final Scanner inputScanner = new Scanner(System.in); 
+    public void showMenu() { 
+        int option; 
+        do { 
+            System.out.println("\n=== Student Management Portal ==="); 
+            System.out.println("1. Register Student"); 
+            System.out.println("2. Display All Students"); 
+            System.out.println("3. Modify Student Details"); 
+            System.out.println("4. Remove Student"); 
+            System.out.println("5. Exit"); 
+            System.out.print("Select an option: "); 
+            option = inputScanner.nextInt(); 
+            inputScanner.nextLine(); // Consume newline 
+            switch (option) { 
+                case 1: 
+                    registerStudent(); 
+                    break; 
+                case 2: 
+                    listStudents(); 
+                    break; 
+                case 3: 
+                    modifyStudent(); 
+                    break; 
+                case 4: 
+                    removeStudent(); 
+                    break; 
+                case 5: 
+                    System.out.println("Closing application..."); 
+                    break; 
+                default: 
+                    System.out.println("Invalid option, please try again."); 
+            } 
+        } while (option != 5); 
+    } 
+    private void registerStudent() { 
+        System.out.print("Enter Student Name: "); 
+        String fullName = inputScanner.nextLine(); 
+        System.out.print("Enter Department: "); 
+        String department = inputScanner.nextLine(); 
+        System.out.print("Enter Marks: "); 
+        int score = inputScanner.nextInt(); 
+        Student newStudent = new Student(0, fullName, department, score); 
+        studentController.addStudent(newStudent); 
+    } 
+    private void listStudents() { 
+        List<Student> studentList = studentController.getAllStudents(); 
+        if (studentList.isEmpty()) { 
+            System.out.println("No student records available."); 
+        } else { 
+            System.out.println("\n--- Student Records ---"); 
+            for (Student student : studentList) { 
+                System.out.println(student); 
+            } 
+        } 
+    } 
+ 
+    private void modifyStudent() { 
+        System.out.print("Enter Student ID to update: "); 
+        int studentId = inputScanner.nextInt(); 
+        inputScanner.nextLine(); // Consume newline 
+        System.out.print("Enter Updated Name: "); 
+        String updatedName = inputScanner.nextLine(); 
+        System.out.print("Enter Updated Department: "); 
+        String updatedDepartment = inputScanner.nextLine(); 
+        System.out.print("Enter Updated Marks: "); 
+        int updatedScore = inputScanner.nextInt(); 
+ 
+        Student updatedStudent = new Student(studentId, updatedName, updatedDepartment, updatedScore); 
+        studentController.updateStudent(updatedStudent); 
+    } 
+ 
+    private void removeStudent() { 
+        System.out.print("Enter Student ID to remove: "); 
+        int studentId = inputScanner.nextInt(); 
+        studentController.deleteStudent(studentId); 
+    } 
+} 
+import java.sql.*; 
+import java.util.ArrayList; 
+import java.util.List; 
+ 
+public class StudentController { 
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/javadb"; 
+    private static final String DB_USER = "root"; 
+    private static final String DB_PASSWORD = "karan.111"; 
+ 
+    public void insertStudent(Student student) { 
+        String sql = "INSERT INTO Students (Name, Department, Marks) VALUES (?, ?, ?)"; 
+ 
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD); 
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) { 
+ 
+            connection.setAutoCommit(false);   
+            preparedStatement.setString(1, student.getName()); 
+            preparedStatement.setString(2, student.getDepartment()); 
+            preparedStatement.setInt(3, student.getMarks()); 
+ 
+            preparedStatement.executeUpdate(); 
+            connection.commit();   
+            System.out.println("Student successfully registered!"); 
+ 
+        } catch (SQLException ex) { 
+            ex.printStackTrace(); 
+        } 
+    } 
+ 
+    public List<Student> fetchAllStudents() { 
+        List<Student> studentList = new ArrayList<>(); 
+        String sql = "SELECT * FROM Students"; 
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD); 
+             Statement statement = connection.createStatement(); 
+             ResultSet resultSet = statement.executeQuery(sql)) { 
+ 
+            while (resultSet.next()) { 
+                studentList.add(new Student(resultSet.getInt("StudentID"), 
+                        resultSet.getString("Name"), 
+                        resultSet.getString("Department"), 
+                        resultSet.getInt("Marks"))); 
+            } 
+ 
+        } catch (SQLException ex) { 
+            ex.printStackTrace(); 
+        } 
+        return studentList; 
+    } 
+ 
+    public void modifyStudent(Student student) { 
+        String sql = "UPDATE Students SET Name=?, Department=?, Marks=? WHERE StudentID=?"; 
+ 
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD); 
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) { 
+ 
+            connection.setAutoCommit(false); 
+            preparedStatement.setString(1, student.getName()); 
+            preparedStatement.setString(2, student.getDepartment()); 
+            preparedStatement.setInt(3, student.getMarks()); 
+            preparedStatement.setInt(4, student.getStudentID()); 
+ 
+            int affectedRows = preparedStatement.executeUpdate(); 
+            if (affectedRows > 0) { 
+                connection.commit(); 
+                System.out.println("Student details updated!"); 
+            } else { 
+                System.out.println("No record found with the given Student ID."); 
+            } 
+ 
+        } catch (SQLException ex) { 
+            ex.printStackTrace(); 
+        } 
+    } 
+ 
+    public void removeStudent(int studentID) { 
+        String sql = "DELETE FROM Students WHERE StudentID=?"; 
+ 
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD); 
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) { 
+ 
+            connection.setAutoCommit(false); 
+            preparedStatement.setInt(1, studentID); 
+ 
+            int affectedRows = preparedStatement.executeUpdate(); 
+            if (affectedRows > 0) { 
+                connection.commit(); 
+                System.out.println("Student record deleted!"); 
+            } else { 
+                System.out.println("No record found with the given Student ID."); 
+            } 
+ 
+        } catch (SQLException ex) { 
+            ex.printStackTrace(); 
+        } 
+    } 
+} 
+public class StudentApplication { 
+public static void main(String[] args) { 
+StudentView studentView = new StudentView(); 
+studentView.showMenu(); 
+} 
+}
